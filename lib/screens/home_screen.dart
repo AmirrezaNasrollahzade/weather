@@ -62,19 +62,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void sendRequestForceCast7Day(
       {required String newLat, required String newLon}) async {
-    const String urlBase = 'https://api.openweathermap.org/data/2.5/weather';
+    //https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&exclude={part}&appid={API key}
+    const String urlBase = 'https://api.openweathermap.org/data/2.5/onecall';
     const String appKey = '263c37f66c1d26ad277dc6fab76286b3';
     List<ForecastDay> list = [];
-
     try {
       Response response = await Dio().get(urlBase, queryParameters: {
         'lat': newLat,
         'lon': newLon,
         'appid': appKey,
-        'units': 'metric',
         'exclude': 'minutely,hourly',
       });
+
       final formatter = DateFormat.MMMd();
+      print(response.data);
       for (int i = 0; i < 8; i++) {
         var model = response.data['daily'][i];
         var dt = formatter.format(
@@ -322,47 +323,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.black,
                         ),
                         SizedBox(
-                          height: 100,
+                          height: 120,
                           width: double.infinity,
                           child: StreamBuilder(
                             stream: streamController!.stream,
                             builder: (context, snapshot) {
                               if (snapshot.hasData) {
+                                List<ForecastDay>? forceCastData =
+                                    snapshot.data;
+
                                 return ListView.builder(
                                   physics: const BouncingScrollPhysics(),
-                                  itemCount: 6,
+                                  itemCount: forceCastData!.length,
                                   scrollDirection: Axis.horizontal,
                                   itemBuilder: (context, index) {
-                                    return Container(
-                                      color: Colors.transparent,
-                                      width: 80,
-                                      child: Container(
-                                        color: Colors.transparent,
-                                        padding: const EdgeInsets.all(5),
-                                        child: const Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Fri, 8Pm",
-                                              style: TextStyle(
-                                                  color: Colors.white),
-                                            ),
-                                            Icon(
-                                              Icons.cloud,
-                                              color: Colors.white,
-                                            ),
-                                            Text(
-                                              "14" + "\u00B0",
-                                              style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
+                                    return forceCastItem(
+                                        newForecastDay: forceCastData[index]);
                                   },
                                 );
                               } else {
@@ -527,4 +503,58 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+Container forceCastItem({required ForecastDay newForecastDay}) {
+  IconData setIconWeather({required String description}) {
+    if (description == "clear sky") {
+      return Icons.sunny;
+    } else if (description == "few clouds") {
+      return Icons.cloud_outlined;
+    } else if (description.contains('clouds')) {
+      return Icons.cloud;
+    } else if (description.contains('thunderstorm')) {
+      return Icons.thunderstorm_rounded;
+    } else if (description.contains('drizzle')) {
+      return Icons.remove_red_eye_sharp;
+    } else if (description.contains('snow')) {
+      return Icons.snowing;
+    } else if (description.contains('rain')) {
+      return Icons.cloudy_snowing;
+    } else {
+      return Icons.error;
+    }
+  }
+
+  return Container(
+    color: Colors.transparent,
+    width: 80,
+    child: Container(
+      color: Colors.transparent,
+      padding: const EdgeInsets.all(5),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(
+            setIconWeather(description: newForecastDay.description),
+            color: Colors.white,
+            size: 32,
+          ),
+          Text(
+            newForecastDay.main,
+            style: const TextStyle(color: Colors.white),
+          ),
+          Text(
+            "${newForecastDay.temp.toString()}\u00B0",
+            style: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          Text(
+            newForecastDay.dateTime.toString(),
+            style: const TextStyle(color: Colors.white),
+          ),
+        ],
+      ),
+    ),
+  );
 }
